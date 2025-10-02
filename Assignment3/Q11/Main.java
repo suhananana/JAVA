@@ -1,40 +1,25 @@
-class AlternateNumbersWaitNotify {
-    private final Object lock = new Object();
-    private int number = 1;
-    private final int MAX = 20;
+class GracefulDownloader {
+    static class Downloader extends Thread {
+        private volatile boolean running = true;
+        private int chunk = 1;
 
-    public void printOdd() {
-        while (true) {
-            synchronized (lock) {
-                while (number % 2 == 0 && number <= MAX) {
-                    try { lock.wait(); } catch (InterruptedException ignored) {}
-                }
-                if (number > MAX) { lock.notifyAll(); break; }
-                System.out.println("OddThread: " + number++);
-                lock.notifyAll();
+        public void run() {
+            while (running && chunk <= 10) {
+                System.out.println("Downloading chunk " + chunk++);
+                try { Thread.sleep(300); } catch (InterruptedException e) { break; }
             }
+            System.out.println("Downloader stopped gracefully.");
         }
-    }
 
-    public void printEven() {
-        while (true) {
-            synchronized (lock) {
-                while (number % 2 == 1 && number <= MAX) {
-                    try { lock.wait(); } catch (InterruptedException ignored) {}
-                }
-                if (number > MAX) { lock.notifyAll(); break; }
-                System.out.println("EvenThread: " + number++);
-                lock.notifyAll();
-            }
-        }
+        public void stopDownload() { running = false; }
     }
 
     public static void main(String[] args) throws InterruptedException {
-        AlternateNumbersWaitNotify an = new AlternateNumbersWaitNotify();
-        Thread t1 = new Thread(an::printOdd, "OddThread");
-        Thread t2 = new Thread(an::printEven, "EvenThread");
-        t1.start(); t2.start();
-        t1.join(); t2.join();
-        System.out.println("Done.");
+        Downloader d = new Downloader();
+        d.start();
+        Thread.sleep(1200);
+        System.out.println("Requesting stop...");
+        d.stopDownload();
+        d.join();
     }
 }
